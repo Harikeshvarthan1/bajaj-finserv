@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Roll Number</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Submit JSON Input</h2>
+    <input type="text" id="jsonInput" placeholder='Enter JSON e.g. {"data": ["A","C","z"]}' style="width: 100%;">
+    <button onclick="submitData()">Submit</button>
+
+    <h3>Multi Filter</h3>
+    <select id="filterSelect" style="width: 100%; padding: 5px;">
+        <option value="none" disabled selected>Select Filter</option>
+        <option value="alphabets">Alphabets</option>
+        <option value="numbers">Numbers</option>
+        <option value="highest_lowercase_alphabet">Highest Lowercase Alphabet</option>
+    </select>
+
+    <div id="selectedFilters" class="selected-filters" style="margin-top: 10px;"></div>
+
+    <div class="response" id="responseDiv" style="margin-top: 20px;"></div>
+</div>
+
+<script>
+    const apiUrl = '/bfhl'; // This now points to the Flask route
+    let lastResponseData = {};
+    let activeFilters = [];
+
+    function submitData() {
+        const input = document.getElementById('jsonInput').value;
+        let parsedInput;
+        try {
+            parsedInput = JSON.parse(input);
+        } catch (e) {
+            alert('Invalid JSON format');
+            return;
+        }
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(parsedInput)
+        })
+        .then(response => response.json())
+        .then(data => {
+            lastResponseData = data; // Store the response data
+            renderResponse(); // Render the response based on active filters
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while processing the request.');
+        });
+    }
+
+    function filterResponse() {
+        const filterSelect = document.getElementById('filterSelect');
+        const selectedOption = filterSelect.value;
+
+        if (!activeFilters.includes(selectedOption)) {
+            activeFilters.push(selectedOption);
+            renderResponse();
+            renderSelectedFilters();
+        }
+    }
+
+    function renderSelectedFilters() {
+        const selectedFiltersDiv = document.getElementById('selectedFilters');
+        selectedFiltersDiv.innerHTML = '';
+
+        activeFilters.forEach(filter => {
+            selectedFiltersDiv.innerHTML += `<span class="filter-tag">${filter.charAt(0).toUpperCase() + filter.slice(1)} <span class="remove-filter" onclick="removeFilter('${filter}')">X</span></span>`;
+        });
+
+        document.getElementById('filterSelect').value = 'none';
+    }
+
+    function removeFilter(filter) {
+        activeFilters = activeFilters.filter(f => f !== filter);
+        renderResponse();
+        renderSelectedFilters();
+    }
+
+    function renderResponse() {
+        const responseDiv = document.getElementById('responseDiv');
+        responseDiv.innerHTML = '';
+
+        if (activeFilters.length === 0) {
+            responseDiv.innerHTML = '<p>No filters selected.</p>';
+            return;
+        }
+
+        activeFilters.forEach(filter => {
+            if (filter === 'alphabets') {
+                responseDiv.innerHTML += `<p>Alphabets: ${JSON.stringify(lastResponseData.alphabets)}</p>`;
+            }
+            if (filter === 'numbers') {
+                responseDiv.innerHTML += `<p>Numbers: ${JSON.stringify(lastResponseData.numbers)}</p>`;
+            }
+            if (filter === 'highest_lowercase_alphabet') {
+                responseDiv.innerHTML += `<p>Highest Lowercase Alphabet: ${JSON.stringify(lastResponseData.highest_lowercase_alphabet)}</p>`;
+            }
+        });
+    }
+
+    document.getElementById('filterSelect').addEventListener('change', filterResponse);
+</script>
+
+<style>
+    .filter-tag {
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        padding: 5px 10px;
+        margin: 5px;
+        border-radius: 3px;
+        font-size: 14px;
+    }
+
+    .remove-filter {
+        margin-left: 8px;
+        cursor: pointer;
+        color: white;
+    }
+</style>
+
+</body>
+</html>
